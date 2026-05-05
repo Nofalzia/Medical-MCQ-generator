@@ -1,0 +1,2123 @@
+<!DOCTYPE html>
+<!--
+  ╔══════════════════════════════════════════════════════════════════════╗
+  ║           CLINIQ — AI-Powered Clinical MCQ Generator                ║
+  ╠══════════════════════════════════════════════════════════════════════╣
+  ║  HOW TO USE:                                                         ║
+  ║  1. Open this file in any modern browser (Chrome, Firefox, Edge).   ║
+  ║  2. Paste your clinical notes and hit "Generate MCQs" — that's it!  ║
+  ║  3. AI-powered by Google Gemini 1.5 Flash (key pre-configured).     ║
+  ║                                                                      ║
+  ║  FEATURES:                                                           ║
+  ║  • Paste/drag-drop clinical notes (.txt, .md, .docx)                ║
+  ║  • AI generates 5 MCQs via Google Gemini 1.5 Flash                  ║
+  ║  • Card-based quiz with keyboard shortcuts (1-4, Space, →)          ║
+  ║  • Hints on demand via AI                                            ║
+  ║  • Session tracking, discharge summaries, logbook                   ║
+  ║  • Weak-area heatmap by body system                                  ║
+  ║  • Streak counter, badges, calendar heatmap                         ║
+  ║  • AI Tutor chat for wrong answers                                   ║
+  ║  • Full data export/import — nothing leaves your browser            ║
+  ╚══════════════════════════════════════════════════════════════════════╝
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CLINIQ — Clinical MCQ Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Syne:wght@400;500;600;700;800&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
+<style>
+/* ═══════════════════════════════════════════
+   CSS CUSTOM PROPERTIES — CLINICAL THEME
+   ═══════════════════════════════════════════ */
+:root {
+  /* Calming Blue/Green Palette (Light) */
+  --bg:          #f4f7f6; /* Soft sage/slate white */
+  --bg2:         #e8eceb; 
+  --bg3:         #d4dbd9;
+  --surface:     #ffffff;
+  --surface2:    #fbfdfc;
+  --border:      #d0d7d6;
+  --border2:     #a3b0ae;
+  --text:        #2d3748; /* Deep slate */
+  --text2:       #4a5568;
+  --text3:       #718096;
+  --accent:      #3174b5; /* Calming Clinical Blue */
+  --accent2:     #429b86; /* Soft Mint Green */
+  --accent3:     #d68f3a; /* Soft Amber */
+  --danger:      #e05d6a;
+  --correct:     #429b86; /* Soft Mint Green */
+  --incorrect:   #e05d6a;
+  --warning:     #d68f3a;
+  
+  /* Glassmorphism Variables */
+  --card-bg:     rgba(255, 255, 255, 0.75);
+  --card-border: rgba(255, 255, 255, 0.6);
+  --nav-bg:      rgba(244, 247, 246, 0.85);
+  --drop-bg:     rgba(255, 255, 255, 0.5);
+  --mcq-bg:      rgba(255, 255, 255, 0.85);
+
+  --card-r:      16px;
+  --trans:       0.3s cubic-bezier(0.4,0,0.2,1);
+  --font-head:   'Syne', sans-serif;
+  --font-body:   'Lora', serif;
+  --font-mono:   'DM Mono', monospace;
+
+  /* Heatmap Variables */
+  --heat-low:    rgba(66, 155, 134, 0.4);
+  --heat-mid:    rgba(214, 143, 58, 0.55);
+  --heat-high:   rgba(224, 93, 106, 0.65);
+  --cal-1:       rgba(66, 155, 134, 0.3);
+  --cal-2:       rgba(66, 155, 134, 0.55);
+  --cal-3:       rgba(66, 155, 134, 0.8);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Deep Navy & Forest Sage (Dark) */
+    --bg:          #0f172a;
+    --bg2:         #1e293b; 
+    --bg3:         #334155;
+    --surface:     #1e293b;
+    --surface2:    #0f172a;
+    --border:      #334155;
+    --border2:     #475569;
+    --text:        #f1f5f9;
+    --text2:       #cbd5e1;
+    --text3:       #94a3b8;
+    --accent:      #60a5fa; /* Brighter Blue */
+    --accent2:     #34d399; /* Bright Mint */
+    
+    --card-bg:     rgba(30, 41, 59, 0.8);
+    --card-border: rgba(255, 255, 255, 0.08);
+    --nav-bg:      rgba(15, 23, 42, 0.85);
+    --drop-bg:     rgba(15, 23, 42, 0.5);
+    --mcq-bg:      rgba(30, 41, 59, 0.85);
+
+    --heat-low:    rgba(52, 211, 153, 0.3);
+    --heat-mid:    rgba(251, 191, 36, 0.45);
+    --heat-high:   rgba(248, 113, 113, 0.55);
+    --cal-1:       rgba(52, 211, 153, 0.25);
+    --cal-2:       rgba(52, 211, 153, 0.5);
+    --cal-3:       rgba(52, 211, 153, 0.75);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+/* ═══════════════════════════════════════════
+   RESET & BASE
+   ═══════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 17px; scroll-behavior: smooth; }
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.65;
+  overflow-x: hidden;
+}
+a { color: var(--accent); text-decoration: none; }
+button { cursor: pointer; font-family: var(--font-body); }
+textarea, input { font-family: var(--font-mono); }
+
+/* ═══════════════════════════════════════════
+   SCROLLBAR
+   ═══════════════════════════════════════════ */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* ═══════════════════════════════════════════
+   LAYOUT — APP SHELL
+   ═══════════════════════════════════════════ */
+#app { display: flex; flex-direction: column; min-height: 100vh; }
+
+/* ── NAV ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 24px;
+  height: 64px;
+  background: var(--nav-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+}
+.nav-logo {
+  font-family: var(--font-head);
+  font-weight: 800;
+  font-size: 1.25rem;
+  letter-spacing: -0.03em;
+  color: var(--accent);
+  display: flex; align-items: center; gap: 8px;
+}
+.nav-logo span { color: var(--text2); font-weight: 400; font-size: 0.8rem; letter-spacing: 0.04em; font-family: var(--font-mono); }
+.nav-links { display: flex; align-items: center; gap: 4px; }
+.nav-btn {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px;
+  padding: 7px 14px;
+  border: none;
+  background: transparent;
+  color: var(--text2);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.07em;
+  border-radius: 8px;
+  transition: var(--trans);
+}
+.nav-btn svg { width: 18px; height: 18px; }
+.nav-btn:hover { background: var(--bg3); color: var(--text); }
+.nav-btn.active { color: var(--accent); background: rgba(49, 116, 181, 0.1); }
+
+/* ── PAGES ── */
+.page {
+  display: none;
+  flex: 1;
+  padding-top: 74px;
+  padding-bottom: 40px;
+  max-width: 720px;
+  margin: 0 auto;
+  width: 100%;
+  padding-left: 20px;
+  padding-right: 20px;
+}
+.page.active { display: block; }
+
+/* ═══════════════════════════════════════════
+   TYPOGRAPHY UTILITIES
+   ═══════════════════════════════════════════ */
+.page-title {
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: 1.6rem;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.page-sub {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text3);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 28px;
+}
+.section-label {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text3);
+  margin-bottom: 10px;
+}
+
+/* ═══════════════════════════════════════════
+   CARDS / SURFACES
+   ═══════════════════════════════════════════ */
+.card {
+  background: var(--card-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-r);
+  padding: 24px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+.card + .card { margin-top: 14px; }
+
+/* ═══════════════════════════════════════════
+   BUTTONS
+   ═══════════════════════════════════════════ */
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 11px 24px;
+  border: none;
+  border-radius: 50px;
+  font-family: var(--font-head);
+  font-weight: 600;
+  font-size: 0.88rem;
+  letter-spacing: 0.01em;
+  transition: var(--trans);
+  cursor: pointer;
+}
+.btn-primary {
+  background: var(--accent);
+  color: #ffffff;
+}
+.btn-primary:hover { background: #1d4ed8; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(37,99,235,0.2); }
+.btn-secondary {
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border2);
+}
+.btn-secondary:hover { background: var(--bg3); border-color: var(--text3); }
+.btn-ghost {
+  background: transparent;
+  color: var(--text2);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover { background: var(--surface); color: var(--text); }
+.btn-danger {
+  background: rgba(224,92,106,0.12);
+  color: var(--danger);
+  border: 1px solid rgba(224,92,106,0.3);
+}
+.btn-danger:hover { background: rgba(224,92,106,0.22); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+.btn-sm { padding: 7px 16px; font-size: 0.78rem; }
+.btn-xs { padding: 4px 10px; font-size: 0.7rem; }
+
+/* ═══════════════════════════════════════════
+   HOME PAGE — INPUT SECTION
+   ═══════════════════════════════════════════ */
+.drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: var(--card-r);
+  position: relative;
+  transition: var(--trans);
+  background: var(--drop-bg);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  overflow: hidden;
+}
+.drop-zone.dragover {
+  border-color: var(--accent);
+  background: rgba(66, 155, 134, 0.08);
+}
+.drop-zone::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(37,99,235,0.03), transparent);
+  pointer-events: none;
+}
+#notes-input {
+  width: 100%;
+  min-height: 220px;
+  background: transparent;
+  border: none;
+  resize: vertical;
+  color: var(--text);
+  font-size: 0.88rem;
+  line-height: 1.7;
+  padding: 20px;
+  outline: none;
+  display: block;
+}
+#notes-input::placeholder { color: var(--text3); font-style: italic; }
+.drop-overlay {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center; flex-direction: column;
+  gap: 8px;
+  background: var(--card-bg);
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+  opacity: 0;
+  transition: var(--trans);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--accent);
+}
+.drop-zone.dragover .drop-overlay { opacity: 1; }
+.drop-toolbar {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 14px 14px;
+  border-top: 1px solid var(--border);
+}
+.drop-toolbar-left { display: flex; gap: 8px; align-items: center; }
+.char-count { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text3); }
+
+/* stats bar */
+.session-stats {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 18px;
+  margin-bottom: 20px;
+  font-family: var(--font-mono); font-size: 0.72rem; color: var(--text2);
+}
+.stat-pill { display: flex; align-items: center; gap: 6px; }
+.stat-pill strong { color: var(--text); }
+.streak-flame { color: var(--accent3); }
+
+/* ═══════════════════════════════════════════
+   LOADING STATE — HEARTBEAT
+   ═══════════════════════════════════════════ */
+#loading-overlay {
+  display: none;
+  flex-direction: column; align-items: center; justify-content: center;
+  gap: 24px;
+  min-height: 220px;
+  text-align: center;
+}
+#loading-overlay.show { display: flex; }
+.heartbeat-container {
+  width: 200px; height: 60px;
+  position: relative;
+}
+.heartbeat-svg { width: 100%; height: 100%; }
+.hb-line {
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  fill: none;
+  stroke-dasharray: 400;
+  stroke-dashoffset: 400;
+  animation: hb-draw 1.8s ease-in-out infinite;
+}
+@keyframes hb-draw {
+  0% { stroke-dashoffset: 400; opacity: 1; }
+  70% { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 0; }
+}
+.loading-text {
+  font-family: var(--font-mono); font-size: 0.72rem;
+  color: var(--text3); letter-spacing: 0.08em;
+  text-transform: uppercase;
+  animation: pulse-text 1.8s ease-in-out infinite;
+}
+@keyframes pulse-text {
+  0%, 100% { opacity: 0.4; } 50% { opacity: 1; }
+}
+
+/* ═══════════════════════════════════════════
+   MCQ QUIZ SECTION
+   ═══════════════════════════════════════════ */
+#quiz-section { display: none; }
+#quiz-section.show { display: block; }
+
+.quiz-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px;
+  flex-wrap: wrap; gap: 10px;
+}
+.quiz-progress-bar-wrap {
+  width: 100%; height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin-bottom: 22px;
+  overflow: hidden;
+}
+.quiz-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  border-radius: 2px;
+  transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+}
+.live-stats {
+  display: flex; gap: 12px; align-items: center;
+  font-family: var(--font-mono); font-size: 0.68rem; color: var(--text2);
+}
+.live-stat { display: flex; gap: 5px; align-items: center; }
+.live-stat strong { color: var(--text); }
+
+/* MCQ Card */
+.mcq-card {
+  background: var(--mcq-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-r);
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  animation: card-in 0.4s cubic-bezier(0.34,1.36,0.64,1) both;
+}
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(18px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+.mcq-card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 22px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg3);
+}
+.q-num { font-family: var(--font-mono); font-size: 0.68rem; color: var(--text3); letter-spacing: 0.08em; }
+.category-badge {
+  font-family: var(--font-mono); font-size: 0.63rem; letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 3px 10px; border-radius: 20px;
+  background: rgba(79,200,168,0.12);
+  color: var(--accent);
+  border: 1px solid rgba(79,200,168,0.25);
+}
+.mcq-question {
+  padding: 22px 22px 8px;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: var(--text);
+  font-family: var(--font-body);
+}
+.mcq-options { padding: 8px 22px 18px; display: flex; flex-direction: column; gap: 9px; }
+.option-btn {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 13px 16px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  font-size: 0.9rem;
+  font-family: var(--font-body);
+  text-align: left;
+  line-height: 1.5;
+  transition: var(--trans);
+  cursor: pointer;
+}
+.option-btn:hover:not(:disabled) {
+  background: var(--bg3);
+  border-color: var(--accent2);
+  transform: translateX(3px);
+}
+.option-key {
+  flex-shrink: 0;
+  width: 24px; height: 24px;
+  background: var(--surface2);
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-size: 0.65rem; font-weight: 500;
+  color: var(--text3);
+  border: 1px solid var(--border2);
+}
+.option-btn.selected .option-key { background: var(--accent2); color: white; border-color: var(--accent2); }
+.option-btn.correct {
+  background: rgba(79,200,168,0.1);
+  border-color: var(--correct);
+}
+.option-btn.correct .option-key { background: var(--correct); color: #ffffff; border-color: var(--correct); }
+.option-btn.incorrect {
+  background: rgba(224,92,106,0.1);
+  border-color: var(--incorrect);
+}
+.option-btn.incorrect .option-key { background: var(--incorrect); color: white; border-color: var(--incorrect); }
+.option-btn:disabled { cursor: default; transform: none; }
+.option-result-icon { margin-left: auto; flex-shrink: 0; font-size: 1rem; }
+
+/* Explanation */
+.explanation-panel {
+  margin: 0 22px 18px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  font-size: 0.85rem;
+  line-height: 1.7;
+  color: var(--text2);
+  display: none;
+  animation: expand-in 0.3s ease both;
+}
+@keyframes expand-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: none; }
+}
+.explanation-panel.show { display: block; }
+.explanation-panel .exp-label {
+  font-family: var(--font-mono); font-size: 0.63rem;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--accent); margin-bottom: 8px;
+}
+.hint-panel {
+  margin: 0 22px 14px;
+  background: rgba(240,160,80,0.08);
+  border: 1px solid rgba(240,160,80,0.25);
+  border-radius: 10px;
+  padding: 14px 16px;
+  font-size: 0.82rem; color: var(--warning);
+  display: none;
+  animation: expand-in 0.3s ease both;
+}
+.hint-panel.show { display: block; }
+.hint-label { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; opacity: 0.7; }
+
+/* Card footer */
+.mcq-footer {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+  padding: 14px 22px 18px;
+  border-top: 1px solid var(--border);
+  gap: 10px;
+}
+.hint-link {
+  font-family: var(--font-mono); font-size: 0.7rem; color: var(--warning);
+  background: none; border: none; cursor: pointer; opacity: 0;
+  transition: var(--trans); text-decoration: underline dotted;
+}
+.hint-link.show { opacity: 1; }
+#btn-end-session {
+  font-family: var(--font-mono); font-size: 0.65rem;
+  color: var(--text3); background: none; border: none; cursor: pointer;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  transition: var(--trans);
+}
+#btn-end-session:hover { color: var(--danger); }
+
+/* ═══════════════════════════════════════════
+   HISTORY PAGE
+   ═══════════════════════════════════════════ */
+.session-table { width: 100%; border-collapse: collapse; }
+.session-table th {
+  font-family: var(--font-mono); font-size: 0.62rem; text-transform: uppercase;
+  letter-spacing: 0.1em; color: var(--text3);
+  padding: 10px 12px; border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+.session-table td {
+  padding: 12px 12px; border-bottom: 1px solid var(--border);
+  font-size: 0.85rem; color: var(--text2);
+  vertical-align: top;
+}
+.session-table tr:hover td { background: var(--bg3); }
+.session-row { cursor: pointer; }
+.acc-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 20px;
+  font-family: var(--font-mono); font-size: 0.65rem; font-weight: 500;
+}
+.acc-high { background: rgba(79,200,168,0.15); color: var(--correct); }
+.acc-mid  { background: rgba(240,160,80,0.15); color: var(--warning); }
+.acc-low  { background: rgba(224,92,106,0.15); color: var(--danger); }
+.expand-detail {
+  display: none; background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+}
+.expand-detail.open { display: table-row; }
+.expand-detail td { padding: 14px 16px; }
+.detail-q-list { display: flex; flex-direction: column; gap: 8px; }
+.detail-q {
+  font-size: 0.8rem; padding: 10px 14px;
+  background: var(--surface); border-radius: 8px;
+  border-left: 3px solid var(--border2);
+}
+.detail-q.correct-q { border-left-color: var(--correct); }
+.detail-q.wrong-q   { border-left-color: var(--danger); }
+.detail-q-text { color: var(--text); margin-bottom: 4px; }
+.detail-q-ans { font-family: var(--font-mono); font-size: 0.68rem; color: var(--text3); }
+
+/* ═══════════════════════════════════════════
+   HEATMAP CALENDAR
+   ═══════════════════════════════════════════ */
+.cal-grid {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  gap: 4px; margin-top: 12px;
+}
+.cal-cell {
+  aspect-ratio: 1/1; border-radius: 3px;
+  background: var(--border);
+  position: relative; cursor: default;
+  transition: var(--trans);
+}
+.cal-cell[data-count="0"] { background: var(--border); }
+.cal-cell[data-count="1"] { background: var(--cal-1); }
+.cal-cell[data-count="2"] { background: var(--cal-2); }
+.cal-cell[data-count="3"] { background: var(--cal-3); }
+.cal-cell[data-count="4"] { background: var(--accent); }
+.cal-cell:hover::after {
+  content: attr(title);
+  position: absolute; bottom: calc(100% + 6px); left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface2); color: var(--text);
+  padding: 4px 8px; border-radius: 6px;
+  font-family: var(--font-mono); font-size: 0.62rem;
+  white-space: nowrap; z-index: 10;
+  border: 1px solid var(--border2);
+}
+.cal-day-label {
+  font-family: var(--font-mono); font-size: 0.58rem;
+  color: var(--text3); text-align: center; text-transform: uppercase;
+}
+
+/* ═══════════════════════════════════════════
+   WEAK AREAS PAGE
+   ═══════════════════════════════════════════ */
+.weak-bar-wrap { margin-bottom: 10px; }
+.weak-bar-label {
+  display: flex; justify-content: space-between; align-items: center;
+  font-family: var(--font-mono); font-size: 0.72rem; color: var(--text2);
+  margin-bottom: 5px;
+}
+.weak-bar-track {
+  height: 8px; background: var(--border); border-radius: 4px; overflow: hidden;
+}
+.weak-bar-fill {
+  height: 100%; border-radius: 4px;
+  transition: width 0.7s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* Body SVG heatmap */
+.body-heatmap-wrap {
+  display: flex; justify-content: center; align-items: flex-start;
+  gap: 28px; flex-wrap: wrap; margin-top: 14px;
+}
+.body-svg-container { position: relative; }
+.body-svg-container svg { display: block; }
+.body-region {
+  fill: var(--bg3);
+  stroke: var(--border2); stroke-width: 1.5;
+  cursor: pointer;
+  transition: var(--trans);
+}
+.body-region:hover { opacity: 0.85; filter: brightness(1.2); }
+.body-region.heat-0  { fill: var(--bg3); }
+.body-region.heat-low    { fill: var(--heat-low); }
+.body-region.heat-mid    { fill: var(--heat-mid); }
+.body-region.heat-high   { fill: var(--heat-high); }
+.region-tooltip {
+  position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+  background: var(--surface2); color: var(--text);
+  padding: 6px 12px; border-radius: 8px; font-family: var(--font-mono); font-size: 0.68rem;
+  white-space: nowrap; border: 1px solid var(--border2); pointer-events: none;
+  z-index: 20; opacity: 0; transition: var(--trans);
+}
+.body-svg-container:hover .region-tooltip { opacity: 1; }
+.heatmap-legend {
+  display: flex; flex-direction: column; gap: 8px;
+  font-family: var(--font-mono); font-size: 0.68rem; color: var(--text2);
+  padding-top: 20px;
+}
+.legend-item { display: flex; align-items: center; gap: 10px; }
+.legend-swatch { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
+
+/* ═══════════════════════════════════════════
+   SETTINGS PAGE
+   ═══════════════════════════════════════════ */
+.setting-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 14px;
+}
+.setting-row:last-child { border-bottom: none; }
+.setting-label { font-size: 0.92rem; color: var(--text); }
+.setting-desc { font-family: var(--font-mono); font-size: 0.68rem; color: var(--text3); margin-top: 3px; }
+.key-input-wrap { position: relative; flex: 1; max-width: 340px; }
+.key-input {
+  width: 100%; background: var(--bg2);
+  border: 1.5px solid var(--border2);
+  border-radius: 8px; padding: 9px 40px 9px 12px;
+  color: var(--text); font-family: var(--font-mono); font-size: 0.75rem;
+  outline: none; transition: var(--trans);
+}
+.key-input:focus { border-color: var(--accent); }
+.key-toggle {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; color: var(--text3); cursor: pointer;
+  display: flex; align-items: center;
+}
+
+/* Badges */
+.badges-grid { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+.badge-item {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 14px 18px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 12px; text-align: center; min-width: 90px;
+  transition: var(--trans);
+}
+.badge-item.earned { border-color: var(--accent2); background: rgba(58,171,222,0.07); }
+.badge-item.locked { opacity: 0.4; filter: grayscale(1); }
+.badge-name { font-family: var(--font-mono); font-size: 0.62rem; color: var(--text2); }
+
+/* ═══════════════════════════════════════════
+   MODAL — DISCHARGE SUMMARY
+   ═══════════════════════════════════════════ */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(15,23,42,0.4);
+  backdrop-filter: blur(10px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+}
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal-box {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 18px;
+  padding: 0;
+  width: 100%; max-width: 520px;
+  overflow: hidden;
+  transform: scale(0.93); transition: transform 0.28s cubic-bezier(0.34,1.36,0.64,1);
+  max-height: 90vh; overflow-y: auto;
+}
+.modal-overlay.open .modal-box { transform: scale(1); }
+.modal-header {
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+  padding: 20px 28px 16px;
+}
+.modal-header-top {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 4px;
+}
+.modal-title {
+  font-family: var(--font-head); font-weight: 700; font-size: 1.15rem;
+  letter-spacing: -0.02em;
+}
+.modal-close {
+  background: none; border: none; color: var(--text3);
+  font-size: 1.2rem; cursor: pointer; padding: 4px;
+  transition: var(--trans); border-radius: 6px;
+}
+.modal-close:hover { color: var(--text); background: var(--surface); }
+.modal-body { padding: 24px 28px; }
+.discharge-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 12px; margin-bottom: 22px;
+}
+.discharge-stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px 16px;
+}
+.discharge-stat-label {
+  font-family: var(--font-mono); font-size: 0.62rem;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--text3); margin-bottom: 4px;
+}
+.discharge-stat-value {
+  font-family: var(--font-head); font-size: 1.4rem;
+  font-weight: 700; color: var(--text);
+}
+.modal-footer {
+  display: flex; gap: 10px; flex-wrap: wrap;
+  padding: 16px 28px 24px;
+  border-top: 1px solid var(--border);
+}
+
+/* ═══════════════════════════════════════════
+   AI TUTOR CHAT
+   ═══════════════════════════════════════════ */
+#ai-tutor-btn {
+  position: fixed; bottom: 28px; right: 28px; z-index: 150;
+  width: 52px; height: 52px; border-radius: 50%;
+  background: var(--accent2);
+  border: none; color: #0f1117;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem; cursor: pointer;
+  box-shadow: 0 6px 24px rgba(58,171,222,0.35);
+  transition: var(--trans);
+}
+#ai-tutor-btn:hover { transform: scale(1.08); background: #50c0f0; }
+.tutor-chat-box {
+  position: fixed; bottom: 90px; right: 28px; z-index: 150;
+  width: 320px;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 18px; overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  transform: scale(0.9) translateY(20px);
+  opacity: 0; pointer-events: none;
+  transition: var(--trans);
+  display: flex; flex-direction: column;
+}
+.tutor-chat-box.open { transform: scale(1) translateY(0); opacity: 1; pointer-events: all; }
+.tutor-chat-header {
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.tutor-chat-title { font-family: var(--font-head); font-size: 0.88rem; font-weight: 600; color: var(--accent2); }
+.tutor-messages {
+  flex: 1; overflow-y: auto;
+  padding: 14px; min-height: 160px; max-height: 250px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.tutor-msg {
+  padding: 10px 13px;
+  border-radius: 12px;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  max-width: 90%;
+  animation: msg-in 0.2s ease;
+}
+@keyframes msg-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.tutor-msg.user { background: var(--accent2); color: #0f1117; align-self: flex-end; border-radius: 12px 12px 4px 12px; }
+.tutor-msg.ai { background: var(--surface2); color: var(--text); align-self: flex-start; border-radius: 12px 12px 12px 4px; }
+.tutor-msg.thinking { color: var(--text3); font-style: italic; background: var(--surface); }
+.tutor-input-row {
+  display: flex; gap: 8px; padding: 12px;
+  border-top: 1px solid var(--border);
+}
+.tutor-input {
+  flex: 1; background: var(--bg3);
+  border: 1px solid var(--border2); border-radius: 8px;
+  padding: 8px 12px; color: var(--text);
+  font-family: var(--font-mono); font-size: 0.73rem;
+  outline: none; resize: none; height: 38px;
+  transition: var(--trans);
+}
+.tutor-input:focus { border-color: var(--accent2); }
+.tutor-send {
+  background: var(--accent2); color: #0f1117;
+  border: none; border-radius: 8px;
+  padding: 0 14px; cursor: pointer; font-size: 1rem;
+  transition: var(--trans);
+}
+.tutor-send:hover { background: #50c0f0; }
+
+/* ═══════════════════════════════════════════
+   API KEY MODAL (first run)
+   ═══════════════════════════════════════════ */
+#apikey-modal .modal-box { max-width: 440px; }
+.apikey-instructions {
+  font-size: 0.82rem; color: var(--text2); line-height: 1.7;
+  margin-bottom: 16px;
+}
+.apikey-instructions a { color: var(--accent); }
+.demo-note {
+  background: rgba(240,160,80,0.1);
+  border: 1px solid rgba(240,160,80,0.25);
+  border-radius: 8px; padding: 10px 14px;
+  font-family: var(--font-mono); font-size: 0.68rem; color: var(--warning);
+  margin-top: 12px;
+}
+
+/* ═══════════════════════════════════════════
+   MISC UTILITIES
+   ═══════════════════════════════════════════ */
+.empty-state {
+  text-align: center; padding: 60px 20px;
+  font-family: var(--font-mono); font-size: 0.75rem; color: var(--text3);
+  line-height: 2;
+}
+.empty-state-icon { font-size: 2.5rem; display: block; margin-bottom: 12px; }
+.divider { height: 1px; background: var(--border); margin: 20px 0; }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 20px; font-family: var(--font-mono); font-size: 0.62rem; background: var(--surface2); color: var(--text3); margin: 2px; }
+.text-accent { color: var(--accent); }
+.text-danger { color: var(--danger); }
+.text-warn   { color: var(--warning); }
+.mt-4 { margin-top: 4px; } .mt-8 { margin-top: 8px; } .mt-16 { margin-top: 16px; } .mt-24 { margin-top: 24px; }
+.mb-4 { margin-bottom: 4px; } .mb-8 { margin-bottom: 8px; } .mb-16 { margin-bottom: 16px; }
+.flex { display: flex; } .items-center { align-items: center; } .gap-8 { gap: 8px; } .justify-between { justify-content: space-between; }
+
+/* TOAST */
+#toast {
+  position: fixed; bottom: 92px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 30px; padding: 10px 22px;
+  font-family: var(--font-mono); font-size: 0.72rem; color: var(--text);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  z-index: 300; white-space: nowrap;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* MOCK MODE banner */
+#mock-banner {
+  display: none;
+  background: rgba(240,160,80,0.12);
+  border: 1px solid rgba(240,160,80,0.3);
+  border-radius: 8px; padding: 8px 14px;
+  font-family: var(--font-mono); font-size: 0.68rem; color: var(--warning);
+  margin-bottom: 16px;
+}
+
+/* Responsive tweaks */
+@media (max-width: 600px) {
+  nav { padding: 0 10px; height: 60px; }
+  .nav-logo { font-size: 1.1rem; gap: 4px; }
+  .nav-logo span { display: none; } /* Hide 'MCQ ENGINE' */
+  .nav-links { gap: 0; }
+  .nav-btn { padding: 6px 8px; font-size: 0.55rem; }
+  .nav-btn svg { width: 18px; height: 18px; }
+  
+  .page { padding-left: 12px; padding-right: 12px; padding-top: 70px; padding-bottom: 20px; }
+  .page-title { font-size: 1.3rem; margin-bottom: 4px; }
+  .page-sub { font-size: 0.65rem; margin-bottom: 20px; }
+  
+  .session-stats { gap: 8px; padding: 10px; justify-content: center; }
+  .stat-pill { font-size: 0.65rem; padding: 4px; }
+  
+  .card { padding: 16px; }
+  #notes-input { min-height: 160px; padding: 12px; font-size: 0.85rem; }
+  .drop-toolbar { padding: 10px; flex-direction: column; align-items: stretch; gap: 12px; }
+  .drop-toolbar-left { display: flex; flex-direction: column; width: 100%; gap: 8px; }
+  .drop-toolbar-left .btn { width: 100%; justify-content: center; }
+  .char-count { text-align: center; width: 100%; }
+
+  .action-row { flex-direction: column !important; align-items: stretch !important; }
+  .action-row .btn { width: 100%; justify-content: center; }
+
+  .mcq-card-header { padding: 12px 14px 10px; flex-direction: column; align-items: flex-start; gap: 8px; }
+  .mcq-question { font-size: 0.95rem; padding: 12px 14px 8px; }
+  .mcq-options { padding: 8px 14px 14px; gap: 8px; }
+  .option-btn { font-size: 0.85rem; padding: 10px 12px; gap: 10px; border-radius: 10px; }
+  .explanation-panel, .hint-panel { margin: 0 14px 14px; padding: 12px; }
+  .mcq-footer { padding: 12px 14px; flex-direction: column; align-items: stretch; gap: 12px; }
+  .mcq-footer > div { justify-content: stretch; width: 100%; margin-top: 0; }
+  .mcq-footer .btn { width: 100%; justify-content: center; }
+  
+  /* Tables horizontally scrollable */
+  #history-content { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -12px; padding: 0 12px; }
+  .session-table { width: 100%; min-width: 500px; }
+  
+  .body-heatmap-wrap { gap: 16px; }
+
+  .discharge-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .modal-overlay { padding: 12px; }
+  .modal-box { border-radius: 14px; margin: 0; width: 100%; max-height: 90vh; }
+  .modal-body { padding: 16px; }
+  .modal-header { padding: 16px 16px 12px; }
+  .modal-footer { padding: 12px 16px 16px; flex-direction: column; }
+  .modal-footer .btn { width: 100%; justify-content: center; }
+  
+  .tutor-chat-box { width: calc(100vw - 24px); right: 12px; bottom: 76px; }
+  #ai-tutor-btn { width: 50px; height: 50px; bottom: 16px; right: 16px; }
+
+  /* Settings */
+  .setting-row { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .key-input-wrap { width: 100%; max-width: none; }
+  
+  /* Badges Grid */
+  .badges-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .badge-item { min-width: 0; padding: 10px 4px; }
+  .badge-item > div:first-child { font-size: 1.2rem !important; }
+}
+
+@media (max-width: 400px) {
+  .nav-logo { font-size: 0; }
+  .nav-logo svg { margin-right: 0; }
+  .discharge-grid { grid-template-columns: 1fr; }
+  .badges-grid { grid-template-columns: repeat(2, 1fr); }
+  .session-stats { flex-direction: column; align-items: stretch; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     NAVIGATION
+══════════════════════════════════════ -->
+<nav>
+  <div class="nav-logo">
+    <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="9" y="1" width="4" height="20" rx="2" fill="currentColor"/><rect x="1" y="9" width="20" height="4" rx="2" fill="currentColor"/></svg>
+    CLINIQ <span>MCQ ENGINE</span>
+  </div>
+  <div class="nav-links">
+    <button class="nav-btn active" data-page="home" onclick="showPage('home')">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 10L10 3l8 7"/><path d="M4 8v9h4v-5h4v5h4V8"/></svg>HOME
+    </button>
+    <button class="nav-btn" data-page="history" onclick="showPage('history')">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="14" height="13" rx="2"/><path d="M7 4V2M13 4V2M3 8h14"/></svg>LOG
+    </button>
+    <button class="nav-btn" data-page="weak" onclick="showPage('weak')">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 14V10M10 7v-.5"/><circle cx="10" cy="10" r="8"/></svg>WEAK
+    </button>
+    <button class="nav-btn" data-page="settings" onclick="showPage('settings')">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="2.5"/><path d="M10 1v2M10 17v2M1 10h2M17 10h2M3.22 3.22l1.41 1.41M15.37 15.37l1.41 1.41M3.22 16.78l1.41-1.41M15.37 4.63l1.41-1.41"/></svg>SET
+    </button>
+  </div>
+</nav>
+
+<!-- ══════════════════════════════════════
+     HOME PAGE
+══════════════════════════════════════ -->
+<div id="page-home" class="page active">
+
+  <!-- Session stats bar (visible when data exists) -->
+  <div id="session-stats-bar" class="session-stats" style="display:none">
+    <div class="stat-pill"><span class="streak-flame">🔥</span> Streak <strong id="stat-streak">0</strong> days</div>
+    <div class="stat-pill">Sessions <strong id="stat-sessions">0</strong></div>
+    <div class="stat-pill">Accuracy <strong id="stat-acc">—</strong></div>
+    <div class="stat-pill">Questions <strong id="stat-total">0</strong></div>
+  </div>
+
+  <!-- mock-mode banner removed (key pre-configured) -->
+
+  <!-- Input section (visible when not quizzing) -->
+  <div id="input-section">
+    <div class="page-title">Clinical Notes → MCQs</div>
+    <div class="page-sub">Paste your notes, generate exam-quality questions instantly</div>
+
+    <div class="section-label">Clinical Notes Input</div>
+    <div class="drop-zone" id="drop-zone">
+      <textarea id="notes-input" spellcheck="true"
+        placeholder="Paste your clinical notes here… (or drag &amp; drop a .txt / .docx / .pdf file)"
+        oninput="updateCharCount()"
+      ></textarea>
+      <div class="drop-overlay">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4v18M9 11l7-7 7 7"/><path d="M4 28h24"/></svg>
+        Drop file to import
+      </div>
+      <div class="drop-toolbar">
+        <div class="drop-toolbar-left">
+          <button class="btn btn-ghost btn-sm" onclick="loadSampleNotes()">💉 Sample Notes</button>
+          <label class="btn btn-ghost btn-sm" style="cursor:pointer">
+            📎 Upload File
+            <input type="file" accept=".txt,.md,.docx,.pdf" style="display:none" onchange="handleFileUpload(this)" />
+          </label>
+        </div>
+        <span class="char-count" id="char-count">0 chars</span>
+      </div>
+    </div>
+
+    <div class="action-row" style="display:flex; gap:10px; align-items:center; margin-top:16px; flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="generateMCQs()" id="gen-btn">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 10h12M13 6l4 4-4 4"/></svg>
+        Generate MCQs
+      </button>
+      <button class="btn btn-ghost btn-sm" onclick="clearInput()">Clear</button>
+    </div>
+
+    <!-- Loading state -->
+    <div id="loading-overlay">
+      <div class="heartbeat-container">
+        <svg class="heartbeat-svg" viewBox="0 0 200 60" preserveAspectRatio="none">
+          <polyline class="hb-line" points="0,30 20,30 30,10 40,50 50,20 60,30 80,30 90,15 100,45 110,30 140,30 150,8 160,52 170,30 200,30"/>
+        </svg>
+      </div>
+      <div class="loading-text" id="loading-text">Analysing notes…</div>
+    </div>
+  </div>
+
+  <!-- Quiz section -->
+  <div id="quiz-section">
+    <div class="quiz-header">
+      <div class="live-stats">
+        <div class="live-stat">Q <strong id="lstat-q">1</strong> / <strong id="lstat-total">5</strong></div>
+        <div class="live-stat">Accuracy <strong id="lstat-acc" class="text-accent">—</strong></div>
+      </div>
+      <button id="btn-end-session" onclick="endSession(false)">↩ End Session</button>
+    </div>
+    <div class="quiz-progress-bar-wrap">
+      <div class="quiz-progress-bar" id="quiz-progress-bar" style="width:0%"></div>
+    </div>
+    <div id="mcq-card-container"></div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════
+     HISTORY PAGE
+══════════════════════════════════════ -->
+<div id="page-history" class="page">
+  <div class="page-title">Session Logbook</div>
+  <div class="page-sub">All study sessions — stored locally in your browser</div>
+
+  <!-- Calendar heatmap -->
+  <div class="section-label">Activity — Last 35 Days</div>
+  <div class="card" style="padding:18px">
+    <div class="cal-grid" id="cal-day-labels"></div>
+    <div class="cal-grid mt-8" id="cal-grid"></div>
+    <div style="display:flex; gap:8px; align-items:center; margin-top:10px; font-family:var(--font-mono); font-size:0.6rem; color:var(--text3)">
+      Less
+      <div style="width:10px;height:10px;border-radius:2px;background:var(--border)"></div>
+      <div style="width:10px;height:10px;border-radius:2px;background:rgba(79,200,168,0.3)"></div>
+      <div style="width:10px;height:10px;border-radius:2px;background:rgba(79,200,168,0.55)"></div>
+      <div style="width:10px;height:10px;border-radius:2px;background:var(--accent)"></div>
+      More
+    </div>
+  </div>
+
+  <div class="divider"></div>
+  <div class="section-label">All Sessions</div>
+  <div id="history-content"></div>
+</div>
+
+<!-- ══════════════════════════════════════
+     WEAK AREAS PAGE
+══════════════════════════════════════ -->
+<div id="page-weak" class="page">
+  <div class="page-title">Weak Areas</div>
+  <div class="page-sub">Analysis of errors across all sessions</div>
+
+  <div id="weak-content">
+    <div class="empty-state"><span class="empty-state-icon">🩺</span>No sessions yet.<br>Generate MCQs to track your performance.</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SETTINGS PAGE
+══════════════════════════════════════ -->
+<div id="page-settings" class="page">
+  <div class="page-title">Settings</div>
+  <div class="page-sub">Preferences and data management</div>
+
+  <div class="card">
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">AI Engine Status</div>
+        <div class="setting-desc">Primary: Groq (llama-3.1-70b) | Fallback: Gemini 1.5 Flash</div>
+      </div>
+      <span class="acc-badge acc-high" style="font-size:0.7rem">✓ Managed by Server</span>
+    </div>
+  </div>
+
+  <div class="card mt-16">
+    <div class="section-label mb-8">Badges & Milestones</div>
+    <div class="badges-grid" id="badges-grid"></div>
+  </div>
+
+  <div class="card mt-16">
+    <div class="section-label mb-8">Data Management</div>
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">Export All Data</div>
+        <div class="setting-desc">Download everything as JSON</div>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="exportData()">⬇ Export</button>
+    </div>
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">Reset All Data</div>
+        <div class="setting-desc">Permanently erase all sessions and settings</div>
+      </div>
+      <button class="btn btn-danger btn-sm" onclick="resetAllData()">🗑 Reset</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     DISCHARGE SUMMARY MODAL
+══════════════════════════════════════ -->
+<div class="modal-overlay" id="discharge-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-header-top">
+        <div class="modal-title">📋 Discharge Summary</div>
+        <button class="modal-close" onclick="closeModal('discharge-modal')">✕</button>
+      </div>
+      <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text3);letter-spacing:0.06em" id="discharge-date"></div>
+    </div>
+    <div class="modal-body">
+      <div class="discharge-grid">
+        <div class="discharge-stat"><div class="discharge-stat-label">Questions</div><div class="discharge-stat-value" id="ds-questions">—</div></div>
+        <div class="discharge-stat"><div class="discharge-stat-label">Accuracy</div><div class="discharge-stat-value" id="ds-accuracy">—</div></div>
+        <div class="discharge-stat"><div class="discharge-stat-label">Time Elapsed</div><div class="discharge-stat-value" id="ds-time">—</div></div>
+        <div class="discharge-stat"><div class="discharge-stat-label">Correct</div><div class="discharge-stat-value" id="ds-correct">—</div></div>
+      </div>
+      <div class="section-label">Categories Covered</div>
+      <div id="ds-categories" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px"></div>
+      <div class="section-label">Question Review</div>
+      <div id="ds-review" class="detail-q-list"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary btn-sm" onclick="saveToLogbook()">💾 Save to Logbook</button>
+      <button class="btn btn-secondary btn-sm" onclick="downloadSummaryText()">⬇ Download Text</button>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('discharge-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- API key modal removed — key is pre-configured -->
+
+<!-- ══════════════════════════════════════
+     AI TUTOR CHAT
+══════════════════════════════════════ -->
+<button id="ai-tutor-btn" onclick="toggleTutor()" title="AI Tutor">
+  <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 3C6.6 3 3 6.1 3 10c0 2.1 1 4 2.7 5.4L5 19l3.5-1.3C9.3 18 10.1 18 11 18c4.4 0 8-3.1 8-7s-3.6-7-8-7z"/><circle cx="8" cy="10" r="1" fill="currentColor" stroke="none"/><circle cx="11" cy="10" r="1" fill="currentColor" stroke="none"/><circle cx="14" cy="10" r="1" fill="currentColor" stroke="none"/></svg>
+</button>
+<div class="tutor-chat-box" id="tutor-chat-box">
+  <div class="tutor-chat-header">
+    <div class="tutor-chat-title">AI Tutor</div>
+    <button class="modal-close" onclick="toggleTutor()">✕</button>
+  </div>
+  <div class="tutor-messages" id="tutor-messages">
+    <div class="tutor-msg ai">👋 Ask me anything about a topic you're studying! I can explain concepts, clarify wrong answers, or suggest mnemonics.</div>
+  </div>
+  <div class="tutor-input-row">
+    <textarea class="tutor-input" id="tutor-input" placeholder="Ask about a concept…" onkeydown="tutorKeydown(event)"></textarea>
+    <button class="tutor-send" onclick="sendTutorMessage()">→</button>
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div id="toast"></div>
+
+<!-- Mammoth.js for .docx support -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<!-- PDF.js for .pdf support -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+
+<script>
+/* ════════════════════════════════════════════════════════════════
+   CLINIQ — Main Application Script
+   ════════════════════════════════════════════════════════════════ */
+
+// ─── Constants & State ─────────────────────────────────────────
+const NETLIFY_GEMINI_URL = '/.netlify/functions/gemini';
+const GOOGLE_GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/';
+const FALLBACK_MODELS = ['gemini-1.5-flash', 'gemini-1.5-pro'];
+const LS_KEY        = 'cliniq_sessions';
+const LS_BADGES     = 'cliniq_badges';
+const LS_STREAK     = 'cliniq_streak';
+
+let currentQuestions  = [];
+let currentIdx        = 0;
+let sessionAnswers    = [];
+let sessionStart      = null;
+let hintTimers        = {};
+let currentSessionId  = null;
+let isMockMode        = false;
+let tutorOpen         = false;
+
+// ─── Utility: localStorage helpers ────────────────────────────
+const LS = {
+  get:    k     => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+  set:    (k,v) => localStorage.setItem(k, JSON.stringify(v)),
+  remove: k     => localStorage.removeItem(k),
+};
+
+// ─── Utility: toast ───────────────────────────────────────────
+function toast(msg, dur = 2800) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), dur);
+}
+
+// ─── INIT ─────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  refreshHomeStats();
+  setupDragDrop();
+  checkAndUpdateStreak();
+});
+
+// API key visibility toggle removed as keys are now server-side
+
+// ─── PAGE NAVIGATION ─────────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`page-${name}`).classList.add('active');
+  document.querySelector(`[data-page="${name}"]`).classList.add('active');
+  if (name === 'history')  renderHistory();
+  if (name === 'weak')     renderWeakAreas();
+  if (name === 'settings') renderBadges();
+}
+
+// ─── DRAG & DROP ──────────────────────────────────────────────
+function setupDragDrop() {
+  const zone = document.getElementById('drop-zone');
+  zone.addEventListener('dragover',  e => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', e => { if (!zone.contains(e.relatedTarget)) zone.classList.remove('dragover'); });
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file) processFile(file);
+  });
+}
+function handleFileUpload(input) {
+  if (input.files[0]) processFile(input.files[0]);
+}
+function processFile(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (ext === 'docx' && typeof mammoth !== 'undefined') {
+    const reader = new FileReader();
+    reader.onload = e => {
+      mammoth.extractRawValue({ arrayBuffer: e.target.result })
+        .then(r => { document.getElementById('notes-input').value = r.value; updateCharCount(); toast('📄 Document imported!'); });
+    };
+    reader.readAsArrayBuffer(file);
+  } else if (ext === 'pdf' && typeof pdfjsLib !== 'undefined') {
+    const reader = new FileReader();
+    reader.onload = async e => {
+      try {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+        const typedarray = new Uint8Array(e.target.result);
+        const pdf = await pdfjsLib.getDocument(typedarray).promise;
+        let text = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          text += content.items.map(item => item.str).join(' ') + '\\n';
+        }
+        document.getElementById('notes-input').value = text;
+        updateCharCount();
+        toast('📄 PDF imported!');
+      } catch (err) {
+        toast('❌ Error parsing PDF: ' + err.message);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    const reader = new FileReader();
+    reader.onload = e => { document.getElementById('notes-input').value = e.target.result; updateCharCount(); toast('📄 File loaded!'); };
+    reader.readAsText(file);
+  }
+}
+function updateCharCount() {
+  const n = document.getElementById('notes-input').value.length;
+  document.getElementById('char-count').textContent = `${n.toLocaleString()} chars`;
+}
+function clearInput() {
+  document.getElementById('notes-input').value = '';
+  updateCharCount();
+}
+function loadSampleNotes() {
+  document.getElementById('notes-input').value = `CASE SUMMARY — ACUTE ST-ELEVATION MYOCARDIAL INFARCTION (STEMI)
+Patient: 58M, known hypertensive and type 2 diabetic on metformin and amlodipine.
+Presenting complaint: Sudden-onset crushing central chest pain radiating to the left arm, diaphoresis, nausea. Duration: 2 hours.
+On examination: HR 98 bpm, BP 100/70 mmHg. Cool peripheries. S3 gallop on auscultation.
+ECG: ST-elevation ≥2 mm in leads II, III, aVF (inferior STEMI). Reciprocal ST depression in I, aVL.
+Troponin I: markedly elevated at 18.6 ng/mL.
+Diagnosis: Inferior STEMI secondary to RCA occlusion.
+Management: Aspirin 300mg + clopidogrel 600mg loading dose. Unfractionated heparin IV. Emergency PCI performed. Drug-eluting stent deployed in mid-RCA. TIMI 3 flow achieved.
+Post-PCI: Started on dual antiplatelet therapy (aspirin 75mg + ticagrelor 90mg BD), atorvastatin 80mg, ramipril 2.5mg OD, bisoprolol 2.5mg OD.
+Complications: Transient complete heart block (Mobitz II) — managed conservatively, resolved in 36 hours.
+Pathophysiology note: Inferior STEMI most commonly involves right coronary artery (RCA). Ischaemia of inferior LV wall and posterior wall. Risk of RV infarction — check right-sided leads (V4R). Jones criteria not applicable here.
+Pharmacology key points: ACE inhibitors reduce mortality post-MI, especially with reduced EF. Beta-blockers reduce reinfarction rate. Statins stabilise plaques. Dual antiplatelet prevents stent thrombosis.`;
+  updateCharCount();
+  toast('📋 Sample notes loaded!');
+}
+
+// ─── GENERATE MCQs ────────────────────────────────────────────
+async function generateMCQs() {
+  const notes = document.getElementById('notes-input').value.trim();
+  if (!notes) { toast('⚠ Please paste some clinical notes first.'); return; }
+
+  showLoading(true);
+  document.getElementById('input-section').querySelector('.drop-zone').style.opacity = '0.5';
+  document.getElementById('gen-btn').disabled = true;
+
+  try {
+    const questions = await fetchFromGemini(notes);
+    currentQuestions  = questions;
+    currentIdx        = 0;
+    sessionAnswers    = [];
+    sessionStart      = Date.now();
+    currentSessionId  = Date.now().toString();
+    showLoading(false);
+    showQuizSection(questions);
+  } catch (err) {
+    showLoading(false);
+    toast(`❌ ${err.message}`, 5000);
+    document.getElementById('input-section').querySelector('.drop-zone').style.opacity = '1';
+    document.getElementById('gen-btn').disabled = false;
+  }
+}
+
+function showLoading(on) {
+  const lo = document.getElementById('loading-overlay');
+  const is = document.getElementById('input-section');
+  if (on) {
+    lo.classList.add('show');
+    const msgs = ['Analysing clinical notes…','Crafting question stems…','Checking answer options…','Generating explanations…'];
+    let mi = 0;
+    window._loadingInterval = setInterval(() => {
+      document.getElementById('loading-text').textContent = msgs[mi++ % msgs.length];
+    }, 1400);
+  } else {
+    lo.classList.remove('show');
+    clearInterval(window._loadingInterval);
+    is.querySelector('.drop-zone').style.opacity = '1';
+    document.getElementById('gen-btn').disabled = false;
+  }
+}
+
+// ─── AI API CALL ──────────────────────────────
+async function callGeminiAPI(body) {
+  try {
+    const res = await fetch(NETLIFY_GEMINI_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error?.message || `API error ${res.status}`);
+    }
+
+    return await res.json();
+  } catch (err) {
+    throw err;
+  }
+}
+
+async function fetchFromGemini(notes) {
+  const prompt = `You are a clinical MCQ generator for medical students preparing for USMLE/PLAB/AMC examinations.
+
+Based on the following clinical notes, generate exactly 5 high-quality multiple choice questions at the level of a final-year medical student.
+
+Rules:
+- Each question must test a distinct clinical concept from the notes.
+- Use clinical vignette format when possible.
+- Each question has exactly 4 options (A, B, C, D).
+- One correct answer only.
+- Include a clear explanation of why the answer is correct and why others are wrong.
+- Assign a short category (e.g., "Cardiology", "Pharmacology", "ECG Interpretation", "Pathophysiology", "Management").
+
+CRITICAL: Output ONLY a valid JSON array. No markdown, no code fences, no preamble.
+
+Format:
+[{"question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"answer":"A. ...","explanation":"...","category":"..."}]
+
+Clinical Notes:
+${notes.substring(0, 4000)}`;
+
+  const body = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: { temperature: 0.7, maxOutputTokens: 2000 }
+  };
+
+  const data = await callGeminiAPI(body);
+  const raw  = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  return parseGeminiResponse(raw);
+}
+
+function parseGeminiResponse(raw) {
+  // strip markdown code fences
+  let clean = raw.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
+  // find first [ and last ]
+  const start = clean.indexOf('[');
+  const end   = clean.lastIndexOf(']');
+  if (start === -1 || end === -1) throw new Error('Could not parse AI response as JSON. Raw: ' + raw.substring(0, 200));
+  try {
+    const arr = JSON.parse(clean.substring(start, end + 1));
+    if (!Array.isArray(arr) || arr.length === 0) throw new Error('Empty question array returned.');
+    return arr;
+  } catch (e) {
+    throw new Error('JSON parse failed: ' + e.message + '. Raw: ' + raw.substring(0, 200));
+  }
+}
+
+// ─── MOCK MODE QUESTIONS ──────────────────────────────────────
+function generateMockQuestions(notes) {
+  return [
+    { question: "A 58-year-old male presents with crushing central chest pain, diaphoresis and nausea. ECG shows ST elevation in leads II, III and aVF. Which coronary artery is most likely occluded?", options: ["A. Left anterior descending artery","B. Left circumflex artery","C. Right coronary artery","D. Posterior descending artery"], answer: "C. Right coronary artery", explanation: "ST elevation in inferior leads (II, III, aVF) indicates inferior STEMI, most commonly caused by RCA occlusion. The RCA supplies the inferior wall of the left ventricle and the right ventricle. LAD occlusion causes anterior STEMI (V1-V4).", category: "Cardiology" },
+    { question: "Which ECG finding would suggest right ventricular infarction complicating an inferior STEMI?", options: ["A. ST elevation in V1-V3","B. ST elevation in V4R","C. New left bundle branch block","D. ST depression in aVR"], answer: "B. ST elevation in V4R", explanation: "Right-sided precordial leads, particularly V4R, are used to diagnose RV infarction complicating inferior STEMI. ST elevation ≥1mm in V4R is highly sensitive and specific for RV MI. RV infarction occurs in ~30% of inferior STEMIs.", category: "ECG Interpretation" },
+    { question: "A patient post-STEMI with EF of 35% is being discharged. Which class of medication has the strongest evidence for reducing mortality in this patient?", options: ["A. Calcium channel blockers","B. ACE inhibitors","C. Nitrates","D. Digoxin"], answer: "B. ACE inhibitors", explanation: "ACE inhibitors (e.g., ramipril) are strongly indicated post-MI, especially with reduced ejection fraction. They reduce afterload, prevent ventricular remodelling, and significantly reduce mortality. Trials such as SAVE and HOPE demonstrated clear mortality benefit.", category: "Pharmacology" },
+    { question: "In the immediate management of STEMI, what is the purpose of dual antiplatelet therapy (aspirin + ticagrelor)?", options: ["A. Dissolve the existing thrombus","B. Prevent stent thrombosis and reinfarction","C. Reduce ventricular remodelling","D. Treat arrhythmias post-PCI"], answer: "B. Prevent stent thrombosis and reinfarction", explanation: "Dual antiplatelet therapy (DAPT) with aspirin and a P2Y12 inhibitor (ticagrelor or clopidogrel) is used to prevent platelet aggregation and stent thrombosis after PCI. Ticagrelor is preferred over clopidogrel (PLATO trial). DAPT is typically continued for 12 months post-DES.", category: "Management" },
+    { question: "A patient develops complete heart block 18 hours after an inferior STEMI. Which structure is most likely affected?", options: ["A. Bundle of His","B. Left bundle branch","C. AV node","D. SA node"], answer: "C. AV node", explanation: "The AV node is supplied by the RCA in ~90% of people. Inferior STEMI (RCA territory) commonly causes AV node ischaemia, leading to heart block, often Mobitz type I (Wenckebach) or complete heart block. This usually resolves spontaneously within days, unlike anterior STEMI-related heart block which is often permanent.", category: "Pathophysiology" }
+  ];
+}
+
+// ─── QUIZ RENDERING ───────────────────────────────────────────
+function showQuizSection(questions) {
+  document.getElementById('input-section').style.display = 'none';
+  const qs = document.getElementById('quiz-section');
+  qs.classList.add('show');
+  document.getElementById('lstat-total').textContent = questions.length;
+  renderQuestion(0);
+  document.addEventListener('keydown', quizKeyHandler);
+}
+
+function renderQuestion(idx) {
+  currentIdx = idx;
+  const q = currentQuestions[idx];
+  const total = currentQuestions.length;
+
+  // Update header
+  document.getElementById('lstat-q').textContent = idx + 1;
+  const answered = sessionAnswers.filter(a => a !== null).length;
+  const correct  = sessionAnswers.filter(a => a?.isCorrect).length;
+  document.getElementById('lstat-acc').textContent = answered ? Math.round(correct/answered*100)+'%' : '—';
+  const pct = (idx / total) * 100;
+  document.getElementById('quiz-progress-bar').style.width = pct + '%';
+
+  const container = document.getElementById('mcq-card-container');
+  container.innerHTML = '';
+
+  const card = document.createElement('div');
+  card.className = 'mcq-card';
+  card.setAttribute('role', 'region');
+  card.setAttribute('aria-label', `Question ${idx+1} of ${total}`);
+
+  card.innerHTML = `
+    <div class="mcq-card-header">
+      <span class="q-num">QUESTION ${idx+1} / ${total}</span>
+      <span class="category-badge">${q.category || 'Clinical'}</span>
+    </div>
+    <div class="mcq-question" id="q-text">${q.question}</div>
+    <div class="mcq-options" id="options-wrap">
+      ${q.options.map((opt, i) => `
+        <button class="option-btn" data-idx="${i}" onclick="selectOption(${i})"
+          aria-label="Option ${i+1}: ${opt}" role="radio" aria-checked="false">
+          <span class="option-key">${i+1}</span>
+          <span>${opt}</span>
+          <span class="option-result-icon" id="icon-${i}"></span>
+        </button>
+      `).join('')}
+    </div>
+    <div class="hint-panel" id="hint-panel">
+      <div class="hint-label">💡 Hint</div>
+      <div id="hint-text">Fetching hint…</div>
+    </div>
+    <div class="explanation-panel" id="exp-panel">
+      <div class="exp-label">Explanation</div>
+      <div id="exp-text">${q.explanation || ''}</div>
+    </div>
+    <div class="mcq-footer">
+      <button class="hint-link" id="hint-link" onclick="fetchHint(${idx})">💡 Need a hint?</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        ${idx === total-1 
+          ? `<button class="btn btn-primary btn-sm" id="btn-discharge" style="display:none" onclick="endSession(true)">📋 Discharge Summary</button>`
+          : `<button class="btn btn-primary btn-sm" id="btn-next" style="display:none" onclick="nextQuestion()">Next →</button>`
+        }
+      </div>
+    </div>
+  `;
+  container.appendChild(card);
+
+  // Schedule hint appearance (10s)
+  clearTimeout(hintTimers[idx]);
+  hintTimers[idx] = setTimeout(() => {
+    const hl = document.getElementById('hint-link');
+    if (hl && !sessionAnswers[idx]) hl.classList.add('show');
+  }, 10000);
+}
+
+function selectOption(optIdx) {
+  if (sessionAnswers[currentIdx]) return; // already answered
+
+  const q   = currentQuestions[currentIdx];
+  const btns = document.querySelectorAll('.option-btn');
+  const isCorrect = q.options[optIdx] === q.answer;
+
+  // Record answer
+  sessionAnswers[currentIdx] = { question: q.question, userAnswer: q.options[optIdx], correctAnswer: q.answer, isCorrect, category: q.category };
+
+  // Style buttons
+  btns.forEach((btn, i) => {
+    btn.disabled = true;
+    const icon = document.getElementById(`icon-${i}`);
+    if (q.options[i] === q.answer) {
+      btn.classList.add('correct');
+      if (icon) icon.textContent = '✓';
+    } else if (i === optIdx && !isCorrect) {
+      btn.classList.add('incorrect');
+      if (icon) icon.textContent = '✗';
+    }
+  });
+
+  // Show explanation
+  const ep = document.getElementById('exp-panel');
+  if (ep) { ep.classList.add('show'); }
+
+  // Show next/discharge button
+  setTimeout(() => {
+    const total = currentQuestions.length;
+    const btnNext = document.getElementById('btn-next');
+    const btnDis  = document.getElementById('btn-discharge');
+    if (btnNext) btnNext.style.display = 'inline-flex';
+    if (btnDis)  btnDis.style.display  = 'inline-flex';
+  }, 600);
+
+  // Hide hint link
+  const hl = document.getElementById('hint-link');
+  if (hl) hl.style.display = 'none';
+  clearTimeout(hintTimers[currentIdx]);
+
+  // Update live stats
+  const answered = sessionAnswers.filter(a => a !== null).length;
+  const correct  = sessionAnswers.filter(a => a?.isCorrect).length;
+  document.getElementById('lstat-acc').textContent = answered ? Math.round(correct/answered*100)+'%' : '—';
+
+  toast(isCorrect ? '✅ Correct!' : '❌ Incorrect');
+}
+
+function nextQuestion() {
+  if (currentIdx < currentQuestions.length - 1) {
+    renderQuestion(currentIdx + 1);
+  }
+}
+
+// ─── KEYBOARD SHORTCUTS ───────────────────────────────────────
+function quizKeyHandler(e) {
+  if (['1','2','3','4'].includes(e.key)) { e.preventDefault(); selectOption(parseInt(e.key)-1); }
+  if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') {
+    const nb = document.getElementById('btn-next');
+    const db = document.getElementById('btn-discharge');
+    if (nb && nb.style.display !== 'none') { e.preventDefault(); nextQuestion(); }
+    if (db && db.style.display !== 'none') { e.preventDefault(); endSession(true); }
+  }
+}
+
+// ─── HINT via Gemini ──────────────────────────────────────────
+async function fetchHint(idx) {
+  const q = currentQuestions[idx];
+  const hp = document.getElementById('hint-panel');
+  const ht = document.getElementById('hint-text');
+  if (!hp || !ht) return;
+  hp.classList.add('show');
+  ht.textContent = 'Fetching hint…';
+
+  const prompt = `For this clinical MCQ, give ONE helpful mnemonic or key clinical clue. Do NOT reveal the answer. Keep it to 2 sentences max.\n\nQuestion: ${q.question}\nOptions: ${q.options.join(' | ')}`;
+
+  try {
+    const body = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.5, maxOutputTokens: 150 } };
+    const data = await callGeminiAPI(body);
+    ht.textContent = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Think about the anatomical territory and clinical pattern.';
+  } catch { ht.textContent = 'Focus on the clinical context and anatomical relationships.'; }
+}
+
+// ─── END SESSION / DISCHARGE ──────────────────────────────────
+function endSession(showDischargeSummary) {
+  document.removeEventListener('keydown', quizKeyHandler);
+  clearInterval(window._loadingInterval);
+  Object.keys(hintTimers).forEach(k => clearTimeout(hintTimers[k]));
+
+  const elapsed = sessionStart ? Math.floor((Date.now() - sessionStart) / 1000) : 0;
+  const answered = sessionAnswers.filter(Boolean);
+  const correct  = answered.filter(a => a.isCorrect).length;
+  const accuracy = answered.length ? Math.round(correct / answered.length * 100) : 0;
+  const cats     = [...new Set(currentQuestions.map(q => q.category).filter(Boolean))];
+
+  const sessionObj = {
+    id: currentSessionId || Date.now().toString(),
+    date: new Date().toISOString(),
+    totalQuestions: currentQuestions.length,
+    answeredQuestions: answered.length,
+    correctCount: correct,
+    accuracy,
+    elapsedSeconds: elapsed,
+    categories: cats,
+    questions: answered,
+    notesSnippet: (document.getElementById('notes-input').value || '').substring(0, 200)
+  };
+
+  if (showDischargeSummary) {
+    populateDischargeSummary(sessionObj);
+    openModal('discharge-modal');
+  }
+  window._pendingSession = sessionObj;
+  checkBadges(sessionObj);
+  updateStreak();
+  refreshHomeStats();
+
+  // Return to input
+  if (!showDischargeSummary) {
+    resetToInput();
+  }
+}
+
+function resetToInput() {
+  document.getElementById('input-section').style.display = '';
+  document.getElementById('quiz-section').classList.remove('show');
+  document.getElementById('mcq-card-container').innerHTML = '';
+  currentQuestions = []; currentIdx = 0; sessionAnswers = []; sessionStart = null;
+  document.getElementById('quiz-progress-bar').style.width = '0%';
+}
+
+function populateDischargeSummary(s) {
+  document.getElementById('discharge-date').textContent = new Date(s.date).toLocaleString();
+  document.getElementById('ds-questions').textContent = s.totalQuestions;
+  document.getElementById('ds-accuracy').textContent   = s.accuracy + '%';
+  const mm = Math.floor(s.elapsedSeconds/60), ss = s.elapsedSeconds % 60;
+  document.getElementById('ds-time').textContent = `${mm}m ${ss}s`;
+  document.getElementById('ds-correct').textContent = s.correctCount + '/' + s.answeredQuestions;
+
+  const catDiv = document.getElementById('ds-categories');
+  catDiv.innerHTML = s.categories.map(c => `<span class="tag">${c}</span>`).join('');
+
+  const rev = document.getElementById('ds-review');
+  rev.innerHTML = s.questions.map(q => `
+    <div class="detail-q ${q.isCorrect ? 'correct-q' : 'wrong-q'}">
+      <div class="detail-q-text">${q.question.substring(0,100)}${q.question.length>100?'…':''}</div>
+      <div class="detail-q-ans">${q.isCorrect ? '✓' : '✗'} Your: ${q.userAnswer} | Correct: ${q.correctAnswer}</div>
+    </div>
+  `).join('');
+}
+
+function saveToLogbook() {
+  if (!window._pendingSession) return;
+  const sessions = LS.get(LS_KEY) || [];
+  // avoid duplicates
+  const idx = sessions.findIndex(s => s.id === window._pendingSession.id);
+  if (idx >= 0) sessions[idx] = window._pendingSession; else sessions.push(window._pendingSession);
+  LS.set(LS_KEY, sessions);
+  window._pendingSession = null;
+  toast('💾 Session saved to logbook!');
+  closeModal('discharge-modal');
+  resetToInput();
+  refreshHomeStats();
+}
+
+function downloadSummaryText() {
+  const s = window._pendingSession;
+  if (!s) return;
+  const lines = [
+    '══════════════════════════════════',
+    '   CLINIQ DISCHARGE SUMMARY',
+    '══════════════════════════════════',
+    `Date: ${new Date(s.date).toLocaleString()}`,
+    `Total Questions: ${s.totalQuestions}`,
+    `Answered: ${s.answeredQuestions}`,
+    `Correct: ${s.correctCount}`,
+    `Accuracy: ${s.accuracy}%`,
+    `Time: ${Math.floor(s.elapsedSeconds/60)}m ${s.elapsedSeconds%60}s`,
+    `Categories: ${s.categories.join(', ')}`,
+    '',
+    '── Question Review ──',
+    ...s.questions.map((q,i) => `${i+1}. [${q.isCorrect?'✓':'✗'}] ${q.question}\n   Answer: ${q.correctAnswer}\n   Your answer: ${q.userAnswer}`)
+  ];
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `cliniq-summary-${Date.now()}.txt`; a.click();
+}
+
+// ─── SESSION STATS (home bar) ─────────────────────────────────
+function refreshHomeStats() {
+  const sessions = LS.get(LS_KEY) || [];
+  const bar = document.getElementById('session-stats-bar');
+  if (sessions.length === 0) { bar.style.display = 'none'; return; }
+  bar.style.display = 'flex';
+  const total   = sessions.reduce((a,s) => a + s.answeredQuestions, 0);
+  const correct = sessions.reduce((a,s) => a + s.correctCount, 0);
+  document.getElementById('stat-sessions').textContent = sessions.length;
+  document.getElementById('stat-acc').textContent      = total ? Math.round(correct/total*100)+'%' : '—';
+  document.getElementById('stat-total').textContent    = total;
+  const streak = LS.get(LS_STREAK) || 0;
+  document.getElementById('stat-streak').textContent   = streak;
+}
+
+// ─── HISTORY PAGE ─────────────────────────────────────────────
+function renderHistory() {
+  const sessions = (LS.get(LS_KEY) || []).slice().reverse();
+  const container = document.getElementById('history-content');
+
+  buildCalendarHeatmap();
+
+  if (!sessions.length) {
+    container.innerHTML = `<div class="empty-state"><span class="empty-state-icon">📂</span>No sessions yet.<br>Generate some MCQs to see your history here.</div>`;
+    return;
+  }
+
+  const table = document.createElement('table');
+  table.className = 'session-table';
+  table.innerHTML = `<thead><tr><th>Date</th><th>Questions</th><th>Accuracy</th><th>Topics</th><th></th></tr></thead><tbody id="session-tbody"></tbody>`;
+  container.innerHTML = '';
+  container.appendChild(table);
+  const tbody = document.getElementById('session-tbody');
+
+  sessions.forEach((s, i) => {
+    const accClass = s.accuracy >= 70 ? 'acc-high' : s.accuracy >= 50 ? 'acc-mid' : 'acc-low';
+    const dateStr  = new Date(s.date).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'2-digit' });
+    const topics   = (s.categories || []).slice(0,3).join(', ');
+
+    const row = document.createElement('tr');
+    row.className = 'session-row';
+    row.innerHTML = `
+      <td>${dateStr}</td>
+      <td style="font-family:var(--font-mono)">${s.answeredQuestions || 0}/${s.totalQuestions}</td>
+      <td><span class="acc-badge ${accClass}">${s.accuracy}%</span></td>
+      <td style="font-size:0.78rem;color:var(--text3)">${topics || '—'}</td>
+      <td><button class="btn btn-danger btn-xs" onclick="deleteSession('${s.id}', event)">✕</button></td>
+    `;
+    row.addEventListener('click', e => { if (e.target.closest('button')) return; toggleSessionDetail(s, i); });
+    tbody.appendChild(row);
+
+    const detailRow = document.createElement('tr');
+    detailRow.className = 'expand-detail';
+    detailRow.id = `detail-${i}`;
+    detailRow.innerHTML = `<td colspan="5"><div class="detail-q-list">
+      ${(s.questions || []).map(q => `
+        <div class="detail-q ${q.isCorrect ? 'correct-q':'wrong-q'}">
+          <div class="detail-q-text">${q.question}</div>
+          <div class="detail-q-ans">${q.isCorrect?'✓':'✗'} <em>${q.category}</em> — Your: ${q.userAnswer} | Correct: ${q.correctAnswer}</div>
+        </div>
+      `).join('')}
+    </div></td>`;
+    tbody.appendChild(detailRow);
+  });
+}
+
+function toggleSessionDetail(s, i) {
+  const el = document.getElementById(`detail-${i}`);
+  if (el) el.classList.toggle('open');
+}
+
+function deleteSession(id, e) {
+  if (e) e.stopPropagation();
+  if (!confirm('Delete this session?')) return;
+  const sessions = (LS.get(LS_KEY) || []).filter(s => s.id !== id);
+  LS.set(LS_KEY, sessions);
+  renderHistory();
+  refreshHomeStats();
+  toast('Session deleted.');
+}
+
+// ─── CALENDAR HEATMAP ─────────────────────────────────────────
+function buildCalendarHeatmap() {
+  const sessions = LS.get(LS_KEY) || [];
+  const today    = new Date();
+  const labels   = document.getElementById('cal-day-labels');
+  const grid     = document.getElementById('cal-grid');
+  labels.innerHTML = '';
+  grid.innerHTML   = '';
+
+  const dayNames = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+  dayNames.forEach(d => {
+    const cell = document.createElement('div');
+    cell.className = 'cal-day-label'; cell.textContent = d;
+    labels.appendChild(cell);
+  });
+
+  const countByDate = {};
+  sessions.forEach(s => {
+    const d = s.date.substring(0,10);
+    countByDate[d] = (countByDate[d] || 0) + (s.answeredQuestions || 0);
+  });
+
+  for (let i = 34; i >= 0; i--) {
+    const d = new Date(today); d.setDate(today.getDate() - i);
+    const key = d.toISOString().substring(0,10);
+    const count = countByDate[key] || 0;
+    const level = count === 0 ? 0 : count < 5 ? 1 : count < 15 ? 2 : count < 30 ? 3 : 4;
+    const cell = document.createElement('div');
+    cell.className = 'cal-cell';
+    cell.setAttribute('data-count', level);
+    cell.title = `${key}: ${count} questions`;
+    grid.appendChild(cell);
+  }
+}
+
+// ─── WEAK AREAS PAGE ──────────────────────────────────────────
+function renderWeakAreas() {
+  const sessions = LS.get(LS_KEY) || [];
+  const container = document.getElementById('weak-content');
+
+  if (!sessions.length) {
+    container.innerHTML = `<div class="empty-state"><span class="empty-state-icon">🩺</span>No sessions yet.<br>Generate MCQs to track your performance.</div>`;
+    return;
+  }
+
+  // Aggregate by category
+  const catStats = {};
+  sessions.forEach(s => {
+    (s.questions || []).forEach(q => {
+      const cat = q.category || 'General';
+      if (!catStats[cat]) catStats[cat] = { correct: 0, total: 0 };
+      catStats[cat].total++;
+      if (q.isCorrect) catStats[cat].correct++;
+    });
+  });
+
+  const sorted = Object.entries(catStats)
+    .map(([cat, st]) => ({ cat, ...st, errorRate: Math.round((1 - st.correct/st.total)*100) }))
+    .sort((a,b) => b.errorRate - a.errorRate);
+
+  let html = `<div class="section-label mb-8">Error Rate by Category</div><div class="card">`;
+  sorted.forEach(c => {
+    const color = c.errorRate > 50 ? 'var(--danger)' : c.errorRate > 30 ? 'var(--warning)' : 'var(--correct)';
+    html += `<div class="weak-bar-wrap">
+      <div class="weak-bar-label"><span>${c.cat}</span><span style="color:${color}">${c.errorRate}% error (${c.total - c.correct}/${c.total} wrong)</span></div>
+      <div class="weak-bar-track"><div class="weak-bar-fill" style="width:${c.errorRate}%;background:${color}"></div></div>
+    </div>`;
+  });
+  html += `</div>`;
+
+  html += buildBodySVGHeatmap(catStats);
+  container.innerHTML = html;
+}
+
+function buildBodySVGHeatmap(catStats) {
+  const heatClass = (cat) => {
+    const s = catStats[cat];
+    if (!s) return 'heat-0';
+    const err = (s.total - s.correct) / s.total;
+    if (err > 0.5)  return 'heat-high';
+    if (err > 0.3)  return 'heat-mid';
+    if (err > 0)    return 'heat-low';
+    return 'heat-0';
+  };
+
+  const regions = [
+    { id: 'brain',    label: 'Neurology',    cat: 'Neurology',    path: 'M100 30 Q120 15 140 30 Q145 55 120 65 Q100 70 80 65 Q55 55 60 30 Z' },
+    { id: 'neck',     label: 'ENT/Neck',     cat: 'ENT',          path: 'M90 70 H110 L115 100 H85 Z' },
+    { id: 'heart',    label: 'Cardiology',   cat: 'Cardiology',   path: 'M80 115 Q75 105 85 100 Q100 108 115 100 Q125 105 120 115 L100 140 Z' },
+    { id: 'lung-l',   label: 'Pulmonology',  cat: 'Pulmonology',  path: 'M68 100 Q55 105 58 130 Q65 145 80 140 L80 110 Z' },
+    { id: 'lung-r',   label: 'Pulmonology',  cat: 'Pulmonology',  path: 'M132 100 Q145 105 142 130 Q135 145 120 140 L120 110 Z' },
+    { id: 'abdomen',  label: 'Gastroenterology', cat: 'Gastroenterology', path: 'M78 142 H122 L118 185 H82 Z' },
+    { id: 'kidney-l', label: 'Nephrology',   cat: 'Nephrology',   path: 'M62 145 Q50 148 52 165 Q55 178 65 175 Q72 170 70 155 Z' },
+    { id: 'kidney-r', label: 'Nephrology',   cat: 'Nephrology',   path: 'M138 145 Q150 148 148 165 Q145 178 135 175 Q128 170 130 155 Z' },
+    { id: 'pelvis',   label: 'Reproductive', cat: 'Reproductive', path: 'M82 185 H118 L120 210 H80 Z' },
+    { id: 'arm-l',    label: 'MSK',          cat: 'Musculoskeletal', path: 'M55 100 Q40 115 42 160 Q48 175 58 175 Q68 170 65 145 L68 100 Z' },
+    { id: 'arm-r',    label: 'MSK',          cat: 'Musculoskeletal', path: 'M145 100 Q160 115 158 160 Q152 175 142 175 Q132 170 135 145 L132 100 Z' },
+    { id: 'leg-l',    label: 'Vascular',     cat: 'Vascular',     path: 'M82 210 L78 280 Q84 290 94 290 L96 210 Z' },
+    { id: 'leg-r',    label: 'Vascular',     cat: 'Vascular',     path: 'M118 210 L122 280 Q116 290 106 290 L104 210 Z' },
+  ];
+
+  const pathsHtml = regions.map(r => {
+    const cl = heatClass(r.cat);
+    return `<path id="body-${r.id}" d="${r.path}" class="body-region ${cl}" data-label="${r.label}">
+      <title>${r.label}</title>
+    </path>`;
+  });
+
+  return `
+  <div class="divider"></div>
+  <div class="section-label mb-8">Body System Heatmap</div>
+  <div class="body-heatmap-wrap">
+    <div class="body-svg-container">
+      <svg width="200" height="310" viewBox="0 0 200 310" xmlns="http://www.w3.org/2000/svg">
+        <!-- Outline silhouette -->
+        <ellipse cx="100" cy="50" rx="32" ry="22" fill="none" stroke="var(--border2)" stroke-width="1" stroke-dasharray="3,3"/>
+        <!-- regions -->
+        ${pathsHtml.join('')}
+        <!-- Labels -->
+        <text x="100" y="50" text-anchor="middle" font-family="DM Mono,monospace" font-size="7" fill="var(--text3)">brain</text>
+        <text x="100" y="122" text-anchor="middle" font-family="DM Mono,monospace" font-size="6" fill="var(--text3)">♥</text>
+        <text x="62" y="125" text-anchor="middle" font-family="DM Mono,monospace" font-size="6" fill="var(--text3)">lung</text>
+        <text x="138" y="125" text-anchor="middle" font-family="DM Mono,monospace" font-size="6" fill="var(--text3)">lung</text>
+      </svg>
+    </div>
+    <div class="heatmap-legend">
+      <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.06em">Legend</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:var(--bg3);border:1px solid var(--border2)"></div>No data / Perfect</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:rgba(79,200,168,0.4)"></div>&lt;30% errors</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:rgba(240,160,80,0.55)"></div>30–50% errors</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:rgba(224,92,106,0.65)"></div>&gt;50% errors</div>
+    </div>
+  </div>`;
+}
+
+// API management removed - managed by server
+
+// ─── BADGES ───────────────────────────────────────────────────
+const BADGE_DEFS = [
+  { id: 'first_q',    name: 'First Steps',     desc: 'Complete first session',     icon: '🏥' },
+  { id: 'q100',       name: '100 Questions',   desc: 'Answer 100 questions total', icon: '💯' },
+  { id: 'q500',       name: '500 Questions',   desc: 'Answer 500 questions total', icon: '🏆' },
+  { id: 'cardio_pro', name: 'Cardio Pro',      desc: '>90% on Cardiology',         icon: '❤️' },
+  { id: 'night_owl',  name: 'Night Owl',       desc: 'Study after 10 PM',          icon: '🦉' },
+  { id: 'streak_7',   name: '7-Day Streak',    desc: '7 consecutive study days',   icon: '🔥' },
+  { id: 'perfect',    name: 'Perfection',      desc: '100% on any session',        icon: '⭐' },
+  { id: 'speed',      name: 'Speed Reader',    desc: 'Complete 5 Qs in <3 mins',   icon: '⚡' },
+];
+
+function checkBadges(session) {
+  const earned = LS.get(LS_BADGES) || [];
+  const sessions = LS.get(LS_KEY) || [];
+  const total = sessions.reduce((a,s) => a + s.answeredQuestions, 0) + session.answeredQuestions;
+  const newBadges = [];
+
+  if (sessions.length === 0 && !earned.includes('first_q'))  { earned.push('first_q');    newBadges.push('First Steps'); }
+  if (total >= 100 && !earned.includes('q100'))              { earned.push('q100');        newBadges.push('100 Questions!'); }
+  if (total >= 500 && !earned.includes('q500'))              { earned.push('q500');        newBadges.push('500 Questions!'); }
+  if (session.accuracy === 100 && !earned.includes('perfect')){ earned.push('perfect');   newBadges.push('Perfect Score!'); }
+  if (new Date().getHours() >= 22 && !earned.includes('night_owl')){ earned.push('night_owl'); newBadges.push('Night Owl!'); }
+  if (session.elapsedSeconds < 180 && session.answeredQuestions >= 5 && !earned.includes('speed')){ earned.push('speed'); newBadges.push('Speed Reader!'); }
+
+  // Cardio pro
+  const cardioDone = [...sessions, session].flatMap(s => s.questions||[]).filter(q => (q.category||'').toLowerCase().includes('cardio'));
+  if (cardioDone.length >= 5) {
+    const acc = cardioDone.filter(q=>q.isCorrect).length / cardioDone.length;
+    if (acc >= 0.9 && !earned.includes('cardio_pro')) { earned.push('cardio_pro'); newBadges.push('Cardiology Pro!'); }
+  }
+
+  LS.set(LS_BADGES, earned);
+  if (newBadges.length) toast('🏅 New badge: ' + newBadges.join(', '), 4000);
+}
+
+function renderBadges() {
+  const earned = LS.get(LS_BADGES) || [];
+  const grid = document.getElementById('badges-grid');
+  grid.innerHTML = BADGE_DEFS.map(b => `
+    <div class="badge-item ${earned.includes(b.id) ? 'earned' : 'locked'}" title="${b.desc}">
+      <div style="font-size:1.5rem">${b.icon}</div>
+      <div class="badge-name">${b.name}</div>
+    </div>
+  `).join('');
+}
+
+// ─── STREAK ───────────────────────────────────────────────────
+function checkAndUpdateStreak() { /* streak updates on session complete */ }
+function updateStreak() {
+  const sessions = LS.get(LS_KEY) || [];
+  if (!sessions.length) return;
+  const today = new Date().toDateString();
+  const lastKey = 'cliniq_last_day';
+  const last = localStorage.getItem(lastKey);
+  let streak = LS.get(LS_STREAK) || 0;
+  if (last !== today) {
+    const yesterday = new Date(); yesterday.setDate(yesterday.getDate()-1);
+    streak = (last === yesterday.toDateString()) ? streak+1 : 1;
+    localStorage.setItem(lastKey, today);
+    LS.set(LS_STREAK, streak);
+    if (streak >= 7) {
+      const badges = LS.get(LS_BADGES) || [];
+      if (!badges.includes('streak_7')) { badges.push('streak_7'); LS.set(LS_BADGES, badges); toast('🔥 7-Day Streak badge earned!', 4000); }
+    }
+  }
+  document.getElementById('stat-streak').textContent = streak;
+}
+
+// ─── AI TUTOR ─────────────────────────────────────────────────
+function toggleTutor() {
+  tutorOpen = !tutorOpen;
+  document.getElementById('tutor-chat-box').classList.toggle('open', tutorOpen);
+}
+function tutorKeydown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendTutorMessage(); }
+}
+async function sendTutorMessage() {
+  const inp = document.getElementById('tutor-input');
+  const msg = inp.value.trim();
+  if (!msg) return;
+  inp.value = '';
+  addTutorMsg(msg, 'user');
+  const thinking = addTutorMsg('Thinking…', 'thinking');
+
+  const prompt = `You are a helpful medical tutor for a student studying clinical medicine. Answer concisely and accurately. If relevant, use a mnemonic or clinical pearl. Keep reply to 3-4 sentences max.\n\nStudent asks: ${msg}`;
+  try {
+    const body = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.6, maxOutputTokens: 300 } };
+    const data = await callGeminiAPI(body);
+    thinking.remove();
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, I couldn\'t get a response.';
+    addTutorMsg(reply, 'ai');
+  } catch {
+    thinking.remove();
+    addTutorMsg('Network error — please try again.', 'ai');
+  }
+}
+function addTutorMsg(text, type) {
+  const msgs = document.getElementById('tutor-messages');
+  const el   = document.createElement('div');
+  el.className = `tutor-msg ${type}`;
+  el.textContent = text;
+  msgs.appendChild(el);
+  msgs.scrollTop = msgs.scrollHeight;
+  return el;
+}
+
+// ─── DATA MANAGEMENT ──────────────────────────────────────────
+function exportData() {
+  const data = {
+    exported:  new Date().toISOString(),
+    sessions:  LS.get(LS_KEY) || [],
+    badges:    LS.get(LS_BADGES) || [],
+    streak:    LS.get(LS_STREAK) || 0,
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `cliniq-data-${Date.now()}.json`; a.click();
+  toast('Data exported!');
+}
+
+function resetAllData() {
+  if (!confirm('Are you sure? This will permanently erase ALL sessions, badges, and settings.')) return;
+  if (!confirm('⚠ Final confirmation: Delete everything?')) return;
+  [LS_KEY, LS_APIKEY, LS_BADGES, LS_STREAK, 'cliniq_last_day', DEMO_MODE].forEach(k => localStorage.removeItem(k));
+  isMockMode = true;
+  toast('All data reset. Refresh to start fresh.');
+  setTimeout(() => location.reload(), 1200);
+}
+
+// ─── MODALS ───────────────────────────────────────────────────
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { 
+  document.getElementById(id).classList.remove('open'); 
+  if (id === 'discharge-modal' && !window._pendingSession) resetToInput();
+}
+
+// ─── TOUCH SWIPE for next question ────────────────────────────
+let touchStartX = 0;
+document.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+document.addEventListener('touchend',   e => {
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  if (dx < -50) {
+    const nb = document.getElementById('btn-next');
+    const db = document.getElementById('btn-discharge');
+    if (nb && nb.style.display !== 'none') nextQuestion();
+    if (db && db.style.display !== 'none') endSession(true);
+  }
+}, { passive: true });
+
+</script>
+</body>
+</html>
