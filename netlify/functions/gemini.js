@@ -94,9 +94,18 @@ exports.handler = async function(event, context) {
     }
   }
 
+  let missing = [];
+  if (!GEMINI_API_KEY) missing.push("GEMINI_API_KEY");
+  if (!GROQ_API_KEY)   missing.push("GROQ_API_KEY");
+  if (!prompt)         missing.push("Prompt/Payload");
+
   return { 
     statusCode: 500, 
     headers: { 'Access-Control-Allow-Origin': '*' },
-    body: JSON.stringify({ error: { message: "No API keys configured or request invalid" } }) 
+    body: JSON.stringify({ 
+      error: { 
+        message: `Configuration Error: Missing ${missing.join(", ")}. Please check Netlify Environment Variables.` 
+      } 
+    }) 
   };
 };
