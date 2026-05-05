@@ -43,7 +43,7 @@ exports.handler = async function(event, context) {
           'Authorization': `Bearer ${GROQ_API_KEY.trim()}`
         },
         body: JSON.stringify({
-          model: 'llama-3.1-70b-versatile',
+          model: 'llama-3.3-70b-versatile',
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.7,
           response_format: { type: "json_object" }
@@ -70,7 +70,7 @@ exports.handler = async function(event, context) {
   // 2. Fallback to Gemini
   if (GEMINI_API_KEY) {
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY.trim()}`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY.trim()}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: event.body
