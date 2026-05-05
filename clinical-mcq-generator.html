@@ -994,7 +994,7 @@ nav {
 <nav>
   <div class="nav-logo">
     <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="9" y="1" width="4" height="20" rx="2" fill="currentColor"/><rect x="1" y="9" width="20" height="4" rx="2" fill="currentColor"/></svg>
-    Dr MCQ <span>MCQ ENGINE</span>
+    Dr MCQ <span></span>
   </div>
   <div class="nav-links">
     <button class="nav-btn active" data-page="home" onclick="showPage('home')">
@@ -1429,13 +1429,24 @@ async function callGeminiAPI(body) {
 }
 
 async function fetchFromGemini(notes) {
-  const prompt = `You are a clinical MCQ generator for medical students.
-Based on the provided clinical notes, generate 5 high-quality multiple choice questions.
+  const prompt = `You are a clinical MCQ generator for medical students preparing for USMLE/PLAB/AMC examinations.
 
-Format: You MUST return a JSON object with a single key "questions" containing an array of 5 question objects.
-Example: {"questions": [{"question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"answer":"A. ...","explanation":"...","category":"..."}]}
+Based on the following clinical notes, generate exactly 5 high-quality multiple choice questions at the level of a final-year medical student.
 
-Notes:
+Rules:
+- Each question must test a distinct clinical concept from the notes.
+- Use clinical vignette format when possible.
+- Each question has exactly 4 options (A, B, C, D).
+- One correct answer only.
+- Include a clear explanation of why the answer is correct and why others are wrong.
+- Assign a short category (e.g., "Cardiology", "Pharmacology", "ECG Interpretation", "Pathophysiology", "Management").
+
+CRITICAL: Output ONLY a valid JSON array. No markdown, no code fences, no preamble.
+
+Format:
+[{"question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"answer":"A. ...","explanation":"...","category":"..."}]
+
+Clinical Notes:
 ${notes.substring(0, 4000)}`;
 
   const body = {
@@ -1445,13 +1456,7 @@ ${notes.substring(0, 4000)}`;
 
   const data = await callGeminiAPI(body);
   const raw  = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  const parsed = parseGeminiResponse(raw);
-  
-  // Handle both {"questions": [...]} and [...] formats
-  if (parsed.questions && Array.isArray(parsed.questions)) return parsed.questions;
-  if (Array.isArray(parsed)) return parsed;
-  
-  throw new Error("AI returned invalid format. Try again with more detailed notes.");
+  return parseGeminiResponse(raw);
 }
 
 function parseGeminiResponse(raw) {
@@ -1462,8 +1467,9 @@ function parseGeminiResponse(raw) {
   const end   = clean.lastIndexOf(']');
   if (start === -1 || end === -1) throw new Error('Could not parse AI response as JSON. Raw: ' + raw.substring(0, 200));
   try {
-    const json = JSON.parse(clean.substring(start, end + 1));
-    return json;
+    const arr = JSON.parse(clean.substring(start, end + 1));
+    if (!Array.isArray(arr) || arr.length === 0) throw new Error('Empty question array returned.');
+    return arr;
   } catch (e) {
     throw new Error('JSON parse failed: ' + e.message + '. Raw: ' + raw.substring(0, 200));
   }
